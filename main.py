@@ -1,13 +1,14 @@
 import socket
 import threading
 from typing import Set, Tuple
-from fastapi import FastAPI
+from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
+from contextlib import asynccontextmanager
 
 app = FastAPI()
 
 # 定义服务器地址和端口
-SERVER_ADDRESS: Tuple[str, int] = ("localhost", 12345)
+SERVER_ADDRESS: Tuple[str, int] = ("0.0.0.0", 12345)
 
 # 存储已连接的客户端
 clients: Set[Tuple[str, int]] = set()
@@ -15,6 +16,7 @@ clients: Set[Tuple[str, int]] = set()
 # UDP 套接字
 udp_socket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 udp_socket.bind(SERVER_ADDRESS)
+print(f"UDP server is running at {SERVER_ADDRESS}")
 
 
 def handle_client() -> None:
@@ -33,10 +35,15 @@ def broadcast(message: bytes, sender_address: Tuple[str, int]) -> None:
             udp_socket.sendto(message, client)
 
 
-@app.on_event("startup")
-def startup_event() -> None:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """在应用启动时启动UDP处理线程"""
     threading.Thread(target=handle_client, daemon=True).start()
+    yield
+    # 在这里可以添加任何需要在应用关闭时执行的清理代码
+
+
+app.router.lifespan_context = lifespan
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -60,11 +67,12 @@ async def read_root() -> str:
 
 
 @app.post("/send")
-async def send_message(message: str, address: str) -> dict:
+async def send_message(message: str = Form(...), address: str = Form(...)) -> dict:
     """发送消息到指定地址"""
     try:
         host, port = address.split(":")
         udp_socket.sendto(message.encode("utf-8"), (host, int(port)))
+        
         return {"status": "Message sent"}
     except Exception as e:
         return {"status": "Error", "message": str(e)}
