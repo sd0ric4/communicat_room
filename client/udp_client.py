@@ -9,13 +9,18 @@ from textual.containers import Container
 class ChatClient(App):
     CSS_PATH = "chat.css"
 
-    def __init__(self, username, server_host='localhost', server_port=12345):
+    def __init__(self, username, password, mode='login', server_host='localhost', server_port=12345):
         super().__init__()
         self.server_address = (server_host, server_port)
         self.username = username
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.sendto(json.dumps({"command": "join", "username": self.username}).encode('utf-8'), self.server_address)
         
+        if mode == 'register':
+            self.register(username, password)
+        elif mode == 'login':
+            self.login(username, password)
+
         # Start heartbeat thread
         heartbeat_thread = threading.Thread(target=self.send_heartbeat)
         heartbeat_thread.daemon = True
@@ -83,8 +88,24 @@ class ChatClient(App):
             heartbeat_message = {"command": "heartbeat", "username": self.username}
             self.socket.sendto(json.dumps(heartbeat_message).encode('utf-8'), self.server_address)
             time.sleep(10)  # 每10秒发送一次心跳包
+    def register(self, username, password):
+        message = {"command": "register", "username": username, "password": password}
+        self.socket.sendto(json.dumps(message).encode('utf-8'), self.server_address)
+        data, _ = self.socket.recvfrom(1024)
+        print(data.decode('utf-8'))  # 显示注册成功或失败信息
 
+    def login(self, username, password):
+        message = {"command": "login", "username": username, "password": password}
+        self.socket.sendto(json.dumps(message).encode('utf-8'), self.server_address)
+        data, _ = self.socket.recvfrom(1024)
+        if data.decode('utf-8') == "Login successful":
+            print("Logged in successfully")
+        else:
+            print("Login failed")
+            exit(0)
 if __name__ == "__main__":
+    mode = input("Enter 'register' to sign up or 'login' to log in: ")
     username = input("Enter your username: ")
-    app = ChatClient(username)
+    password = input("Enter your password: ")
+    app = ChatClient(username, password, mode=mode)
     app.run()

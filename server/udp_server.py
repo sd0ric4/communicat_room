@@ -4,6 +4,7 @@ import threading
 import json
 import time
 from datetime import datetime
+import hashlib
 
 # 初始化 Redis 客户端
 r = redis.Redis(host='localhost', port=6379, db=0)
@@ -21,7 +22,23 @@ class ChatServer:
         monitor_thread = threading.Thread(target=self.monitor_clients)
         monitor_thread.daemon = True
         monitor_thread.start()
+    
 
+    def register_user(self, username, password):
+        if r.hexists("users", username):
+            return False  # 用户名已存在
+        # 保存加密后的密码
+        hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        r.hset("users", username, hashed_password)
+        return True
+    
+    def authenticate_user(self, username, password):
+        stored_password = r.hget("users", username)
+        if stored_password is None:
+            return False  # 用户名不存在
+        return stored_password.decode('utf-8') == hashlib.sha256(password.encode('utf-8')).hexdigest()
+    
+    
     def handle_message(self, data, addr):
         message = json.loads(data.decode('utf-8'))
         username = message.get("username")
@@ -45,7 +62,22 @@ class ChatServer:
             data, addr = self.socket.recvfrom(1024)
             message = json.loads(data.decode('utf-8'))
             command = message.get("command")
-
+            if command == "register":
+                username = message.get("username")
+                password = message.get("password")
+                if self.register_user(username, password):
+                    self.socket.sendto(b"Registration successful", addr)
+                else:
+                    self.socket.sendto(b"Username already taken", addr)
+            elif command == "login":
+                username = message.get("username")
+                password = message.get("password")
+                if self.authenticate_user(username, password):
+                    self.clients[username] = addr
+                    self.last_heartbeat[username] = time.time()
+                    self.socket.sendto(b"Login successful", addr)
+                else:
+                    self.socket.sendto(b"Invalid username or password", addr)
             if command == "join":
                 username = message.get("username")
                 self.clients[username] = addr
