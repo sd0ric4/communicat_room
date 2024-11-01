@@ -8,6 +8,16 @@
 
 ### 客户端
 
+#### 配置文件
+
+通过修改`config.toml`文件，可以修改服务器地址和端口。
+
+```toml
+[server]
+host = "localhost"
+port = 12345
+```
+
 #### 用户注册
 
 ![注册](assets/readme/image.png)

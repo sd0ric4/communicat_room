@@ -2,6 +2,7 @@ import socket
 import json
 import threading
 import time
+import toml
 from textual.app import App, ComposeResult
 from textual.widgets import Static, Input, Button
 from textual.containers import Container
@@ -88,6 +89,7 @@ class ChatClient(App):
             heartbeat_message = {"command": "heartbeat", "username": self.username}
             self.socket.sendto(json.dumps(heartbeat_message).encode('utf-8'), self.server_address)
             time.sleep(10)  # 每10秒发送一次心跳包
+
     def register(self, username, password):
         message = {"command": "register", "username": username, "password": password}
         self.socket.sendto(json.dumps(message).encode('utf-8'), self.server_address)
@@ -103,9 +105,14 @@ class ChatClient(App):
         else:
             print("Login failed")
             exit(0)
+
 if __name__ == "__main__":
+    config = toml.load("client/config.toml")
+    server_host = config["server"]["host"]
+    server_port = config["server"]["port"]
+
     mode = input("Enter 'register' to sign up or 'login' to log in: ")
     username = input("Enter your username: ")
     password = input("Enter your password: ")
-    app = ChatClient(username, password, mode=mode)
+    app = ChatClient(username, password, mode=mode, server_host=server_host, server_port=server_port)
     app.run()

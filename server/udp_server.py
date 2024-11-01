@@ -10,7 +10,7 @@ import hashlib
 r = redis.Redis(host='localhost', port=6379, db=0)
 
 class ChatServer:
-    def __init__(self, host='localhost', port=12345):
+    def __init__(self, host='0.0.0.0', port=12345):
         self.server_address = (host, port)
         self.clients = {}
         self.last_heartbeat = {}
@@ -53,6 +53,7 @@ class ChatServer:
         if recipient:
             if recipient in self.clients:
                 self.socket.sendto(f"{username} (private): {msg_text}".encode('utf-8'), self.clients[recipient])
+                self.socket.sendto(f"{username} (private): {msg_text}".encode('utf-8'), addr)
         else:
             for client_addr in self.clients.values():
                 self.socket.sendto(f"{username}: {msg_text}".encode('utf-8'), client_addr)
