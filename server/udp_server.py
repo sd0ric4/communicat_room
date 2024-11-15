@@ -83,6 +83,9 @@ class ChatServer:
                 username = message.get("username")
                 self.clients[username] = addr
                 self.last_heartbeat[username] = time.time()
+                for client_addr in self.clients.values():
+                    if client_addr != addr:
+                        self.socket.sendto(f"{username} 加入聊天".encode('utf-8'), client_addr)
                 print(f"{username} joined from {addr}")
             elif command == "message":
                 self.handle_message(data, addr)
@@ -99,6 +102,9 @@ class ChatServer:
             current_time = time.time()
             for username, last_time in list(self.last_heartbeat.items()):
                 if current_time - last_time > 30:  # 超过30秒未收到心跳包，认为客户端掉线
+                    for client_addr in self.clients.values():
+                        if client_addr != self.clients[username]:
+                            self.socket.sendto(f"{username} 离开了我们".encode('utf-8'), client_addr)
                     print(f"{username} is offline")
                     del self.clients[username]
                     del self.last_heartbeat[username]
