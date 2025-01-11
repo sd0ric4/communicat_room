@@ -1,32 +1,14 @@
-#chatlog {
-    background: black;
-    color: green;
+.input-area {
+    width: 100%;
+    height: auto;
+    padding: 1;
 }
 
-#message_input {
-    background: darkslategray;
-    color: white;
-}
-
-#send_button {
-    background: teal;
-    color: white;
-}
-
-#input_container {
-    display: block;
-}
-
-#input_container {
-    layout: horizontal;
-}
-
-#input_box,
-#recipient_box {
-    width: 40%;
+.message-input {
+    width: 70%;
     margin-right: 1;
 }
 
-#send_button {
-    width: auto;
+.recipient-input {
+    width: 30%;
 }
